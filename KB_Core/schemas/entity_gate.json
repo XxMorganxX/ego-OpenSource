@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "noise": { "type": "boolean" },
+    "stale": { "type": "boolean" },
+    "reason": { "type": "string" }
+  },
+  "required": ["noise", "stale"]
+}

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0e14" />
+    <title>ego-OS · Knowledge Base</title>
+    <!-- Start the tree request while the JS bundle is still downloading: App's fetchTree()
+         on mount picks up this response instead of waiting for React to boot first.
+         `crossorigin` (credentials: same-origin) is what makes it match a plain fetch(). -->
+    <link rel="preload" href="/api/tree" as="fetch" crossorigin />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

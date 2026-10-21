@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Stands in for the `claude` CLI in the hybrid-tenancy end-to-end run (e2e_hybrid.sh).
+#
+# `claude auth status` -> the JSON kb_agent.jobs.claude_auth_status parses (loggedIn, email).
+# `claude -p --model M --system-prompt S ... <hardening flags>` with the user prompt on stdin
+# (kb_agent.jobs.ClaudeCli.argv) -> one schema-shaped JSON reply, picked from the JSON schema
+# that kb_agent.jobs.system_text appends to the system prompt. Unknown schemas get `{}`, which
+# the pass may reject: a cleanly failed job is an acceptable outcome for the e2e. A call
+# without `-p`, or with nothing on stdin, exits 64: the runner's contract has drifted.
+set -euo pipefail
+if [[ "${1:-}" == "auth" ]]; then
+  echo '{"loggedIn": true, "authMethod": "claude.ai", "email": "e2e@example.com"}'
+  exit 0
+fi
+sys=""
+print_mode=0
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+  [[ "${args[$i]}" == "-p" ]] && print_mode=1
+  if [[ "${args[$i]}" == "--system-prompt" && $((i + 1)) -lt ${#args[@]} ]]; then
+    sys="${args[$((i + 1))]}"
+  fi
+done
+# Assert the runner's contract rather than tolerate drift: print mode, prompt on stdin.
+if (( ! print_mode )); then
+  echo "fake-claude: expected -p (print mode); the kb-agent runner always passes it" >&2
+  exit 64
+fi
+prompt="$(cat)"
+if [[ -z "$prompt" ]]; then
+  echo "fake-claude: empty stdin; the user prompt must arrive on stdin, never argv" >&2
+  exit 64
+fi
+# Only the appended schema decides the reply: prompt prose may quote any of these keys.
+schema=""
+[[ "$sys" == *"conforming to this JSON schema"* ]] && schema="${sys##*conforming to this JSON schema}"
+case "$schema" in
+  *'"noise"'*)    echo '{"noise": false, "stale": false, "reason": "e2e"}' ;;
+  *'"entities"'*) echo '{"entities": []}' ;;
+  *'"status"'*)   echo '{"classes": []}' ;;
+  *'"classes"'*)  echo '{"classes": []}' ;;
+  *'"kind"'*)     echo '{"kind": "note"}' ;;
+  *)              echo '{}' ;;
+esac

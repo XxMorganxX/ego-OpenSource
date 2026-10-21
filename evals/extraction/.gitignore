@@ -1,0 +1,3 @@
+runs/
+# run.py's default --out when no --run-dir is given (bench.sh always passes one).
+results/

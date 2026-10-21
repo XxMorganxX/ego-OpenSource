@@ -1,0 +1,57 @@
+# Repo-wide ignores (applies to all subprojects).
+# Subprojects keep their own .gitignore for project-specific build output.
+
+# OS junk
+.DS_Store
+
+# Python bytecode / caches / environments
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Tool output: test reports and coverage can embed page text, test data and
+# absolute paths. Also hard-denied from every public export (publish/manifest.py).
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Playwright MCP scratch output
+.playwright-mcp/
+
+# Git worktrees
+.worktrees/
+
+# Local agent scratch
+.superpowers/
+
+# An optional local notes folder kept beside the code; never committed here
+/KB_Obsidian/
+
+# Secrets, repo-wide: any .env in any subproject (KB_Inference/.env has no
+# .gitignore of its own). Examples stay tracked.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# kb-publish state (pin, last publish, pending coauthors): one untracked file in
+# the primary checkout, shared by every worktree (kb_core/publish/state.py).
+private/publish-state.json
+
+# Per-install policy + prompt overlays — policy.toml.example is the committed template.
+KB_Core/policy.toml
+KB_Core/prompts.local/
+
+# Backup private keys (age) — keep them outside the repo; this is a backstop.
+kb-backup-key*.txt
+*.agekey
+
+# Database dumps — full plaintext corpus.
+*.dump
+backups/

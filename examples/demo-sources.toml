@@ -1,0 +1,14 @@
+# sources.toml for the README's "Try it in 5 minutes" demo (KB_SOURCES_CONFIG points here).
+# Same keys as KB_Core/sources.toml; see KB_Core/docs/ingestion-architecture.md.
+#
+# is_enrichable = false: demo notes are never queued for enrichment, so no LLM passes
+# and no embeddings run. Ingest, the tree, the dashboard and keyword search still work.
+# Set KB_OBSIDIAN_VAULT to examples/demo-vault and KB_OBSIDIAN_STAMP=0 alongside it.
+
+[obsidian]
+enabled        = true
+is_enrichable  = false
+period_seconds = 20     # rescan the notes folder every 20 s
+
+[webhook]
+enabled        = false

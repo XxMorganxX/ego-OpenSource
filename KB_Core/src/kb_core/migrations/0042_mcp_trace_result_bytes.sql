@@ -1,0 +1,20 @@
+-- Context cost of every traced retrieval call: the exact UTF-8 byte length of the
+-- result payload as FastMCP serialises it into the TextContent block the client
+-- receives (pydantic_core.to_json(result, fallback=str, indent=2) -- see
+-- func_metadata._convert_to_content, NOT the lowlevel handler's json.dumps branch,
+-- which dict-returning tools with an output schema never reach).
+--
+-- Bytes, not tokens, on purpose: bytes are a measurement, tokens are an estimate.
+-- KnowledgeBase derives estimated tokens at READ time from one constant
+-- (_BYTES_PER_TOKEN), so recalibrating that constant re-derives every historical row
+-- with a one-line edit -- no UPDATE, no second migration, no table rewrite.
+--
+-- NULLABLE WITH NO DEFAULT, deliberately. DEFAULT 0 would assert that every row
+-- written before this migration returned an empty payload -- false, and it would
+-- poison every median and sum with zeros. NULL means "not measured", which is the
+-- truth for all pre-existing rows: mcp_trace.results stored ids and scores, never
+-- text, so their payload sizes are unrecoverable and no backfill is possible.
+--
+-- No index: every aggregate over this column is already scoped by (at, caller),
+-- which mcp_trace_at_idx covers.
+ALTER TABLE mcp_trace ADD COLUMN result_bytes integer;

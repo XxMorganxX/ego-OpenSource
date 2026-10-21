@@ -1,0 +1,119 @@
+# LLM enrichment pipeline — an ordered list of stateless passes over each enrichable node.
+# Which model tier answers each pass is routed per-task in `inference.toml` (see
+# kb_core/inference_routing.py) — this file only defines the passes. A pass name must be a
+# registered inference task, or the daemons refuse to start.
+#
+# The editable content lives in its own files (paths resolved relative to this config):
+#   system_file / user_file  -> prompts/*.md    (or inline `system` / `user` for short ones)
+#   schema_file              -> schemas/*.json  (enforced structured output)
+#
+# A user prompt template may reference {title}, {content}, {path}, {location} (the path as a
+# readable breadcrumb, e.g. "projects › kb_mcp › Note"), {source}, and the output of any
+# EARLIER pass by its name (e.g. {summary}). `target` (optional) writes a pass's
+# output to a node field — 'summary', 'tags', or 'entities' (stage entity candidates).
+# Add/remove/reorder [[pass]] blocks to change the pipeline; edit the prompt files freely.
+
+# summary + topics passes dropped for a leaner, entity-focused pipeline. No entity
+# pass consumes {summary}/{tags}, so this only speeds enrichment (6→4 passes per node) and skips
+# generating note summaries/tags. Note: embeddings now embed raw content instead of the summary.
+# (The prompt files prompts/{summary,topics}.* are kept for easy re-add.)
+
+# Triage gate — judges two independent things before the entity passes run:
+#   NOISE  — content with no extractable meaning (mashed characters, accidental input, filler).
+#            Excluded from the entity system AND its prior influence retracted. NOT a richness
+#            test: a short but genuine note (a one-line to-do, a name, a fact) is low-signal yet
+#            not noise, so it stays eligible.
+#   STALE  — content no longer chronologically relevant (a passed event, an overdue one-off, an
+#            outdated status), judged from the note's created/updated dates vs today. RETIRED:
+#            frozen, prior influence KEPT (not retracted), never recrawled until a human revives.
+# Both exclude the memory from going-forward voting/creation/linking while leaving it a normal,
+# searchable memory. MUST precede the entity passes below — its verdict gates discover_classes/
+# classify on this run and is persisted, so extract_entities (re-analysis) reads the stored state.
+# Fail-open on a missing/garbled verdict (the memory is left exactly as-is).
+[[pass]]
+name        = "entity_gate"
+target      = "entity_gate"
+system_file = "prompts/entity_gate.system.md"
+user_file   = "prompts/entity_gate.user.md"
+schema_file = "schemas/entity_gate.json"
+
+# Pass 1 — discover/grow the category taxonomy. The model is given the current categories
+# ({entity_classes}: active ones with their description, plus the strongest not-yet-active
+# candidates by name) and decides which apply, marking each new or existing. Surfacing the
+# candidates lets the model reuse an emerging name instead of minting a near-duplicate. A new
+# category is created INACTIVE and staged as a vote; it only flips active (gaining a
+# description and counting as established) once it recurs across enough distinct memories —
+# the same recurrence gate instances get — so a one-off or hallucinated category never sticks.
+[[pass]]
+name        = "discover_classes"
+target      = "entity_classes"
+system_file = "prompts/discover_classes.system.md"
+user_file   = "prompts/discover_classes.user.md"
+schema_file = "schemas/entity_classes.json"
+
+# Pass 2 — classify this memory under the (now-updated) defined categories, linking it to
+# each via a belongs_to edge.
+[[pass]]
+name        = "classify_memory"
+target      = "classify"
+system_file = "prompts/classify_memory.system.md"
+user_file   = "prompts/classify_memory.user.md"
+schema_file = "schemas/classify.json"
+
+# Pass 3 (ENRICH phase) — extract the specific named things the memory mentions and assign each
+# to the ACTIVE type(s) it is, staging them as candidates. Runs at first ingest too (not only
+# re-analysis) so the instance graph starts forming immediately; re-extracted on recrawl as the
+# type taxonomy matures. Top-down: only active types are assigned; a no-active-fit name is kept
+# UNTYPED until a type activates.
+[[pass]]
+name        = "extract_entities"
+target      = "entities"
+system_file = "prompts/entities.system.md"
+user_file   = "prompts/entities.user.md"
+schema_file = "schemas/entities.json"
+
+# Document-kind facet — what the memory IS (meeting notes, implementation plan, …), coined
+# open-vocabulary. The user template's {doc_kinds} block (kinds already in use, strongest
+# first) converges labels by visibility instead of restriction. Runs regardless of the
+# entity gate (kind is orthogonal to entity eligibility) and in both phases so early
+# scattered coinages converge as the corpus matures. Routing: per-task in
+# `inference.toml`.
+[[pass]]
+name        = "doc_kind"
+target      = "doc_kind"
+system_file = "prompts/doc_kind.system.md"
+user_file   = "prompts/doc_kind.user.md"
+schema_file = "schemas/doc_kind.json"
+
+# Re-triage on every re-analysis pass too — staleness develops over time, so a note that was
+# current when first enriched must be re-checked as the corpus is revisited (a dead node drops out
+# of the crawl, so this only ever sees still-live memories). Same gate as the enrich-phase one;
+# MUST precede extract_entities below so a memory retired/excluded this crawl stages nothing.
+[[pass]]
+name        = "entity_gate"
+target      = "entity_gate"
+phase       = "recrawl"
+system_file = "prompts/entity_gate.system.md"
+user_file   = "prompts/entity_gate.user.md"
+schema_file = "schemas/entity_gate.json"
+
+# Pass 3 (RE-CRAWL phase) — re-extract instances during re-analysis as the type taxonomy
+# matures. Runs on recrawl only (the enrich-phase pass above handles first-time ingest).
+# Once an instance recurs across enough memories, promotion nests it under its type in
+# entity_links.
+[[pass]]
+name        = "extract_entities"
+target      = "entities"
+phase       = "recrawl"
+system_file = "prompts/entities.system.md"
+user_file   = "prompts/entities.user.md"
+schema_file = "schemas/entities.json"
+
+# Recrawl-phase doc_kind — re-asks as the in-use list matures (convergence needs revisits).
+[[pass]]
+name        = "doc_kind"
+target      = "doc_kind"
+phase       = "recrawl"
+system_file = "prompts/doc_kind.system.md"
+user_file   = "prompts/doc_kind.user.md"
+schema_file = "schemas/doc_kind.json"

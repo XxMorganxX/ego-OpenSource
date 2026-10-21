@@ -1,0 +1,13 @@
+# Floors are the oldest versions this suite is known to pass with on Python 3.13
+# (checked with `uv pip install --resolution lowest-direct`); older releases either
+# don't build on 3.13 or carry a TestClient bug the tests trip over.
+fastapi>=0.133
+starlette>=1.7          # 1.7 is the first TestClient that parses an IPv6 [::1] host
+uvicorn[standard]>=0.34
+langchain>=1.0
+langchain-ollama>=1.0
+pydantic>=2.11
+
+# test
+pytest>=8.3
+httpx>=0.28   # fastapi.testclient

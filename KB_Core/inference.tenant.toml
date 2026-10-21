@@ -1,0 +1,33 @@
+# KB_Core/inference.tenant.toml
+# Routing profile for TENANT daemons (kb-svc.sh exports KB_INFERENCE_ROUTING to this
+# file when KB_TENANT is set). Every completion task is served by the tenant's own
+# machine through the `agent` provider (hybrid tenancy); only
+# embeddings stay on the host. Same validation as inference.toml: complete-by-construction.
+
+[provider.agent]
+concurrency = 8      # per-process ceiling on in-flight jobs waiting on the agent
+timeout = 600        # seconds a caller waits before pausing provider `agent`
+
+[task.entity_gate]
+provider = "agent"
+[task.discover_classes]
+provider = "agent"
+[task.classify_memory]
+provider = "agent"
+[task.extract_entities]
+provider = "agent"
+[task.doc_kind]
+provider = "agent"
+[task.describe_entity]
+provider = "agent"
+[task.merge_judge]
+provider = "agent"
+[task.meaning_gate]
+provider = "agent"
+[task.concept_label]
+provider = "agent"
+[task.curate_parse]
+provider = "agent"
+timeout = 60         # interactive: fail fast when the tenant's agent is offline
+[task.embed]
+provider = "local"

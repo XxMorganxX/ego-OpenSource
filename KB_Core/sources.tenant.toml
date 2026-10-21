@@ -1,0 +1,12 @@
+# KB_Core/sources.tenant.toml
+# Source toggles for TENANT ingest daemons (KB_SOURCES_CONFIG points here in tenant
+# mode). Tenants have no local vault: notes arrive as push events from their kb-agent
+# through the gateway, under source `vault`.
+
+[vault]
+enabled        = true
+is_enrichable  = true
+period_seconds = 20
+
+[webhook]
+enabled        = false

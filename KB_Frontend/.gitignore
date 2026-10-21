@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Tool output (Playwright / vitest coverage): can embed rendered page text.
+test-results/
+playwright-report/
+coverage/
+.nyc_output/

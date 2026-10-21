@@ -1,0 +1,20 @@
+# Lint config for the monorepo (KB_Core / KB_Retrieval / KB_MCP / KB_Inference / KB_Agent),
+# enforced in CI.
+# Ruff's default rule set (E4/E7/E9 + F) minus this codebase's deliberate compact style.
+extend-exclude = [".venv", "node_modules", "dist", "build", "KB_Obsidian"]
+
+[lint]
+# Pinned EXPLICITLY rather than relying on ruff's defaults. CI runs `uvx ruff`, which
+# resolves the newest release, and ruff 0.16 expanded its default set far beyond the
+# four rule groups this comment has always claimed — 342 findings appeared repo-wide
+# (UP037 x123, I001 x72, RUF059 x36, BLE001 x35, ...) with no code change. Stating the
+# intended set makes the lint gate independent of the tool's version drift.
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    "E702",  # multiple statements on one line (semicolon) — a deliberate compact style here
+]
+
+[lint.per-file-ignores]
+# Tests: unused locals are common for side-effect calls; late imports are intentional.
+"**/test_*.py" = ["F841", "E402"]
+"**/conftest.py" = ["E402"]

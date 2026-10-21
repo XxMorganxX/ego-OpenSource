@@ -1,0 +1,9 @@
+# Tenant-neutral policy: the shipped defaults with NO prompt overlay. Committed; never edit
+# it for one tenant (give that tenant its own file via `policy = "..."` in tenants.toml).
+#
+# `python -m kb_core.tenants env <slug>` points KB_POLICY_CONFIG here for every tenant whose
+# registry entry names no policy, so a tenant daemon that still calls load_policy() reads
+# this file — never the owner's ./policy.toml or prompts.local/ (hybrid
+# tenancy). Every other section is absent on purpose: absent = the shipped default.
+[prompts]
+overlay = false

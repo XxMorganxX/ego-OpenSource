@@ -1,0 +1,77 @@
+# Allowlist manifest for the ego-OS public mirror (see docs/publishing.md).
+# Only paths matching `include` (and no `exclude`) are ever published.
+# New top-level files/dirs are PRIVATE BY DEFAULT until listed here.
+# This file IS exported (transparency); publish.deny.toml is NOT.
+
+[publish]
+remote = "https://github.com/example/ego-OS.git"
+
+[export]
+include = [
+    "KB_Core/**",
+    "KB_Retrieval/**",
+    "KB_MCP/**",
+    "KB_Inference/**",
+    "KB_Frontend/**",
+    "evals/**",
+    "docs/README.md",                  # docs index
+    "docs/operations.md",              # README's ops material (services, ports, tests)
+    "docs/exposure.md",                # README's exposure material
+    "docs/publishing.md",              # how this mirror is published + how PRs come back
+    "docs/llm-inference-map.md",
+    "docs/setup/**",                   # agent-driven setup guide + recipes
+    # docs/ops is named FILE BY FILE: it also holds deployment-specific notes,
+    # so a new file there stays private until it is listed here.
+    "docs/ops/tenant-onboarding.md",   # README links it
+    "docs/ops/backup-restore.md",      # README links it
+    "KB_Agent/**",                     # the tenant-side agent (hybrid tenancy)
+    ".claude/skills/setup-kb/**",      # the one skill we publish (points at docs/setup)
+    ".github/workflows/ci.yml",
+    ".github/ISSUE_TEMPLATE/**",       # bug + feature issue forms
+    ".github/pull_request_template.md",
+    "scripts/ci/**",                   # ci.yml's job scripts: the public tree runs its own CI
+    ".gitignore",
+    "ruff.toml",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "examples/**",                     # invented demo vault + demo sources.toml
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "SECURITY.md",
+    "publish.manifest.toml",
+]
+# Media is never denylist-scanned (a screenshot can show real corpus content),
+# so every exported image/PDF/video must ALSO be named here. Prefer none.
+allow_media = []
+exclude = [
+    ".github/workflows/publish-candidate.yml",  # private-only verdict workflow (also hard-denied
+                                                # in code); named so the intent is visible here
+    ".github/dependabot.yml",          # private-only (also hard-denied in code): dependency
+                                       # updates land upstream and arrive with a sync
+    "**/CLAUDE.md",                    # agent-policy docs are private-workflow
+    "*/.claude/**",                    # sub-repo .claude dirs are private-workflow. Root
+                                       # .claude/ stays private by default: only the
+                                       # setup-kb skill dir above is ever included.
+    ".claude/hooks/**",                # root .claude/: only skills/setup-kb is ever included
+    ".claude/settings*.json",
+    ".claude/worktrees/**",
+    "KB_Core/docs/plans/**",           # historical internal planning docs
+    "KB_Core/docs/superpowers/**",
+    "KB_Core/docs/specs/**",           # historical internal design docs
+    "KB_Core/docs/architecture.*",     # superseded diagram
+    "KB_Core/scripts/policy_equivalence.py",  # one-off acceptance check against a live DB
+    "KB_Core/policy.toml",             # defensive: per-install files, never published
+    "KB_Core/prompts.local/**",        # defensive: per-install files, never published
+    "**/tenants.toml",                 # defensive: per-install files, never published
+    "**/tenants/**",                   # defensive: per-install files, never published
+    "KB_Frontend/.playwright-mcp/**",  # defensive: untracked tool output
+    "KB_Frontend/.agents/**",          # vendored third-party skill docs
+    "KB_Frontend/skills-lock.json",    # the skills CLI's lockfile for .agents/ above
+    "KB_Frontend/.mcp.json",
+    "KB_Frontend/deploy/**",           # per-deployment ingress helper, never published
+    "evals/concepts/results/**",       # run outputs, never published
+    "evals/retrieval/results/**",
+    "evals/**/.cache/**",              # defensive: local caches, never published
+]

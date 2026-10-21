@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "classes": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["new", "existing"] },
+          "description": { "type": "string", "maxLength": 160 },
+          "kind": { "type": "string", "enum": ["person", "organization", "place", "event", "project", "artifact", "concept", "system", "other"] }
+        },
+        "required": ["name", "status"]
+      }
+    }
+  },
+  "required": ["classes"]
+}

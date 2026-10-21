@@ -1,0 +1,19 @@
+# Per-adapter ingestion settings — dev-tunable toggles only.
+#
+# Secrets and machine paths stay in the environment (KB_DATABASE_URL,
+# KB_OBSIDIAN_VAULT, KB_INGEST_SECRET); this file controls behavior only.
+#
+#   enabled         run this source's ingest job at all
+#   is_enrichable   run new/changed nodes through the (LLM) enrichment pipeline
+#   period_seconds  how often the job runs; 0 = once per scheduler heartbeat
+#                   (KB_TICK_SECONDS, default 20 s) -- never a tight loop
+
+[obsidian]
+enabled        = true
+is_enrichable  = true
+period_seconds = 0      # once per scheduler heartbeat (KB_TICK_SECONDS, default 20 s)
+
+[webhook]
+enabled        = true
+is_enrichable  = false
+period_seconds = 60

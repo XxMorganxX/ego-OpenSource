@@ -1,0 +1,6 @@
+# Sweep artifacts are regenerable; keep them out of blanket `git add -A`.
+#
+# results/ holds regenerable sweep output, including any snapshot captured there.
+# Every sweep arm must read one frozen capture (--snapshot): the sweep results
+# record the snapshot's hash so a changed capture is detectable.
+results/

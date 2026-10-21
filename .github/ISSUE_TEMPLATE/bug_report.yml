@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in ego-OS does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security issue?** Do not file it here: see SECURITY.md (private vulnerability reporting).
+
+        Please keep personal data out of this issue: no real note text, email, names, or
+        note/memory ids. A synthetic reproduction is best.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      multiple: true
+      options:
+        - KB_Core (engine, ingestion, enrichment, dashboard API)
+        - KB_Retrieval
+        - KB_MCP
+        - KB_Inference
+        - KB_Frontend (dashboard)
+        - KB_Agent
+        - setup / scripts / docs
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Trim it to the relevant lines and remove anything personal.
+      render: text
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, how you run the stack (kb-run, kb-dev, systemd), commit or release, and the providers in KB_Core/inference.toml if enrichment is involved.
+    validations:
+      required: true

@@ -1,0 +1,62 @@
+# KB_Core/inference.toml — the ONLY place inference routing lives.
+# Every KB_Core inference task MUST have a [task.<name>] block; startup fails
+# otherwise (kb_core/inference_routing.py holds the registration table and the
+# validation). Providers: local (KB_Inference/Gemma) | claude-cli (claude -p,
+# subscription) | anthropic (Messages API, metered — needs ANTHROPIC_API_KEY).
+# Daemons read this at start: `kb-dev` restart to apply a change.
+
+[provider.claude-cli]
+model = "claude-haiku-4-5-20251001"  # the bulk per-memory passes run on Haiku: they are
+                              # structured extraction, and Haiku keeps them off Sonnet quota
+                              # (a Sonnet session limit pauses the whole enrichment lane).
+                              # concept_label pins Sonnet explicitly below.
+concurrency = 8               # per-PROCESS ceiling on concurrent `claude -p` calls, shared
+                              # across models on this provider (one subscription). Four
+                              # daemons hold their own router, so system-wide worst case is
+                              # 4x this. Local is capped on the server instead
+                              # (KB_INFERENCE_MAX_CONCURRENCY).
+
+[provider.anthropic]
+model = "claude-sonnet-5"
+
+# [provider.local] takes no model: the local model is whatever KB_Inference
+# serves (OLLAMA_MODEL, swapped via kb-model.sh) — routing never chooses it.
+
+[task.entity_gate]
+provider = "claude-cli"
+
+[task.discover_classes]
+provider = "claude-cli"
+
+[task.classify_memory]
+provider = "claude-cli"
+
+[task.extract_entities]
+provider = "claude-cli"       # off local by default — heaviest per-memory pass
+                              # (~2,950 prompt tokens of scaffolding before note text)
+
+[task.doc_kind]
+provider = "local"            # cheap one-label pass. Local KB_Inference is single-flight
+                              # (30-77s/call on Gemma), fine at steady state; to drain a
+                              # large backlog, route it to claude-cli temporarily.
+
+[task.describe_entity]
+provider = "local"            # same trade-off as doc_kind
+
+[task.merge_judge]
+provider = "local"
+
+[task.meaning_gate]
+provider = "claude-cli"       # also governs the kb-denoise-instances backfill CLI
+
+[task.concept_label]
+provider = "claude-cli"
+model = "claude-sonnet-5"     # per-task override beats the [provider.*] default
+
+[task.curate_parse]
+provider = "claude-cli"
+
+[task.embed]
+provider = "local"            # MUST stay local (enforced): changing the embedding
+                              # model invalidates every stored vector — re-embed
+                              # via kb-embed-backfill before trusting search again

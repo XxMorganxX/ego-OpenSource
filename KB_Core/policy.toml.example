@@ -1,0 +1,76 @@
+# Per-install policy — copy to policy.toml (gitignored) and edit. Every section is
+# optional; an absent section keeps the shipped default named in its comment. The
+# daemons read this once at start: `kb-dev restart` (or restart kb-run) after editing.
+# Validate first:  uv run kb-policy check      Inspect what is live:  uv run kb-policy show
+# Full guide: docs/policy-setup.md
+
+# ---- Content-age decay --------------------------------------------------------------
+# Scoped rules; the FIRST rule whose match fits a memory wins (file order). A matched,
+# dated memory's influence in concept clustering and entity promotion decays from 1.0
+# toward `floor` with the given half-life. Undated memories and unmatched memories never
+# decay. Shipped default: no rules (nothing decays).
+#
+# match conditions (all given ones must hold):
+#   tags        = ["a", "b"]        every listed tag present on the memory
+#   path_prefix = "Layer.Folder"    memory filed under this ltree path (ancestor-or-self)
+#   source      = "obsidian"        the ingest source name
+[[decay]]
+name = "newsletters"
+match = { tags = ["newsletter"] }
+half_life_days = 30
+floor = 0.1
+
+[[decay]]
+name = "journal"
+match = { path_prefix = "Obsidian.Journal" }
+half_life_days = 90
+floor = 0.3
+
+# ---- Project dormancy ---------------------------------------------------------------
+# A folder boost inherited by a project's docs fades while the project is quiet. A project
+# is the subtree opened by `folder_label` at depth 0..max_depth, up to and including the
+# next label:  Obsidian.Projects.<repo>  ->  project key Obsidian.Projects.<repo>.
+# Shipped default: section absent (no dormancy decay).
+[projects]
+folder_label = "Projects"
+max_depth = 1
+dormancy_half_life_days = 182.5
+
+# ---- Retrieval importance -----------------------------------------------------------
+# The boost above 1.0 that search applies decays by retrieval recency toward
+# recency_floor; access_saturation is the access count at which the access factor is 0.5.
+# Shipped defaults shown.
+[importance]
+recency_half_life_days = 8
+recency_floor = 0.65
+access_saturation = 10
+
+# ---- Concept goal priority ----------------------------------------------------------
+# Shipped defaults shown.
+[concepts]
+goal_window_days = 14
+data_recency_half_life_days = 14
+retrieval_recency_half_life_days = 7
+recency_floor = 0.2
+
+# ---- Entity taxonomy ----------------------------------------------------------------
+# Categories are offered verbatim to the extraction prompt as "fixed broad categories" and
+# seed each category's structural kind (person | organization | place | event | project |
+# artifact | concept | system | other). kind_seeds map further well-known names to kinds.
+# Shipped default: the eight structural kinds themselves, no extra seeds.
+[taxonomy]
+categories = [
+  { name = "person",        kind = "person",       description = "an individual human" },
+  { name = "organization",  kind = "organization", description = "a company, institution, group, club, nonprofit, or public body" },
+  { name = "project",       kind = "project",      description = "a bounded initiative, build effort, or engagement" },
+  { name = "supplier",      kind = "organization", description = "a vendor or partner the work depends on" },
+  { name = "tool",          kind = "system",       description = "a framework, API, library, utility, or reusable technical tool" },
+]
+kind_seeds = { vendor = "organization", app = "system" }
+
+# ---- Prompt overlays ----------------------------------------------------------------
+# Files in this directory shadow the shipped prompts/ files of the same name (and the
+# partials they include). Default when this file exists: "prompts.local".
+# `overlay = false` (instead of overlay_dir) serves the shipped prompts only.
+[prompts]
+overlay_dir = "prompts.local"

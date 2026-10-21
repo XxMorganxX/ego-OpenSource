@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+dist/
+*.egg-info/
+
+# Secrets / local config (do NOT commit)
+.env
+.env.tunnel
+.cloudflare/
+.claude/settings.local.json
+
+# Database dumps / local backups
+backups/
+
+# OS
+.DS_Store
+
+.superpowers/

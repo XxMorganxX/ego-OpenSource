@@ -1,0 +1,61 @@
+# Postgres 16 + ltree + pgvector for kb-mcp.
+#
+#   docker compose up -d          # start (data persists in the kb_pgdata volume)
+#   docker compose ps             # 'db' should report (healthy)
+#   docker compose down           # stop + remove container (KEEPS data)
+#   docker compose down -v        # also delete the volume (WIPES all data)
+#
+# Connection string (with the .env defaults). `kb`/POSTGRES_PASSWORD is the
+# bootstrap superuser -- break-glass only. Services (and this example) connect as
+# the unprivileged app role provisioned by db/init/02-roles.sh on first init:
+#   postgresql://kb_app:<KB_APP_PASSWORD>@localhost:<DB_HOST_PORT>/kb_mcp
+#
+# Pin the Compose project name so resources (container + kb_pgdata volume) are
+# namespaced as `kb_mcp_*` regardless of which directory this file lives in.
+# Without this, moving the file changes the project name and orphans the data
+# volume / collides with the existing kb_mcp_db container.
+#
+# A SECOND install on the same machine (another clone, a fork, the public repo next to
+# a live stack) must set KB_COMPOSE_PROJECT in its own KB_Core/.env (and a different
+# DB_HOST_PORT): with the default, `docker compose up -d` there would recreate kb_mcp_db
+# on the first install's kb_mcp_kb_pgdata volume and run against that corpus. The
+# default keeps existing installs on their existing container and volume.
+name: ${KB_COMPOSE_PROJECT:-kb_mcp}
+services:
+  db:
+    image: pgvector/pgvector:pg16   # official postgres:16 + pgvector; ltree ships in contrib
+    container_name: ${KB_COMPOSE_PROJECT:-kb_mcp}_db
+    # Per-tenant pools: three shared services × 10 tenants × KB_TENANT_POOL_MAX(4) plus
+    # four daemons per tenant can exceed the default 100. Config only; takes
+    # effect on the next `docker compose up -d`.
+    command: ["postgres", "-c", "max_connections=300"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in KB_Core/.env (openssl rand -hex 24)}
+      POSTGRES_DB: ${POSTGRES_DB:-kb_mcp}
+      KB_APP_USER: ${KB_APP_USER:-kb_app}
+      KB_APP_PASSWORD: ${KB_APP_PASSWORD:?set KB_APP_PASSWORD in KB_Core/.env (openssl rand -hex 24)}
+      KB_TEST_PASSWORD: ${KB_TEST_PASSWORD:-kb_test}
+    ports:
+      # Host port is configurable; defaults to 5433 so it coexists with a native
+      # Postgres still listening on 5432. Container always listens on 5432 inside.
+      #
+      # The 127.0.0.1 prefix is load-bearing, not decoration. Without it Docker
+      # publishes on 0.0.0.0 AND punches its own rule through the macOS firewall,
+      # which makes the database reachable from any device on the LAN even while
+      # every app service (MCP 3000, dashboard 8000, inference 8001) is
+      # loopback-bound. Do not drop the prefix to "expose the DB to another
+      # machine" — tunnel it instead.
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - kb_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro   # *.sql here run once, on first init
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kb} -d ${POSTGRES_DB:-kb_mcp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kb_pgdata:

@@ -1,0 +1,51 @@
+[project]
+name = "ego-os-mcp"
+version = "0.1.0"
+license = "Apache-2.0"
+authors = [{ name = "The ego-OS Authors" }]
+description = "Thin MCP transport exposing agent-driven CRUD over the ego-OS engine (kb_core)"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.28.1,<2",
+    "anyio>=4.14.2",
+    "pyjwt[crypto]>=2.15",
+    "cryptography>=50",
+    "pydantic-settings>=2.14.2",
+    "uvicorn>=0.23",
+    "ego-os-core",
+    "ego-os-retrieval",
+]
+
+[project.urls]
+Homepage = "https://github.com/XxMorganxX/Ego-OpenSource"
+Repository = "https://github.com/XxMorganxX/Ego-OpenSource"
+Issues = "https://github.com/XxMorganxX/Ego-OpenSource/issues"
+Changelog = "https://github.com/XxMorganxX/Ego-OpenSource/blob/main/CHANGELOG.md"
+
+[project.scripts]
+kb-mcp = "kb_mcp.server:main"
+
+# The sibling packages, consumed as editable path dependencies. The dependency
+# chain KB_MCP -> ego-os-retrieval -> ego-os-core must stay acyclic: KB_Retrieval owns
+# retrieval POLICY (strategies, fusion, confidence, traversal) and KB_Core stays
+# the sole Postgres owner. KB_MCP imports both -- kb_core for the KnowledgeBase
+# every tool calls, kb_retrieval for the strategy registry search_graph sits on.
+[tool.uv.sources]
+ego-os-core = { path = "../KB_Core", editable = true }
+ego-os-retrieval = { path = "../KB_Retrieval", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kb_mcp"]

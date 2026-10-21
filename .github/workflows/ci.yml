@@ -1,0 +1,131 @@
+name: CI
+
+# Enforces the test suites, lint, typecheck and a secret scan on every push and PR.
+# Postgres-backed suites get a real pgvector service; the frontend gets tsc
+# typecheck (via build) + vitest.
+#
+# Each job runs exactly one scripts/ci/<job>.sh. Those scripts are the single
+# definition of "the checks pass": kb-publish's verify runs the same ones, so
+# the two cannot drift. A job's `name:` is the check-run name kb-publish
+# requires to be green (kb_core/publish/ci_attest.py CI_CHECKS; a test keeps
+# them equal). Actions are pinned by commit sha, the release in the comment.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# One run per workflow + PR/ref: a newer push supersedes a stale run on a branch.
+# main is never cancelled: its runs are what kb-publish's ci_attest reads.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  lint:
+    name: ruff (lint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+      - run: scripts/ci/lint.sh
+
+  python:
+    name: pytest — KB_Core + KB_Retrieval + KB_MCP + KB_Agent
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+        env:
+          POSTGRES_USER: kb
+          POSTGRES_PASSWORD: kb
+          POSTGRES_DB: kb_mcp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Same interpreter as the live venvs (each package's .python-version says 3.13).
+      UV_PYTHON: "3.13"
+      KB_TEST_DATABASE_URL: postgresql://kb:kb@localhost:5432/kb_mcp_test
+      # A second tenant database for the hybrid-tenancy isolation tests (tenant A and B
+      # must be two real databases); the script creates it.
+      KB_TEST_DATABASE_URL_B: postgresql://kb:kb@localhost:5432/kb_mcp_test_b
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+      - run: scripts/ci/python.sh
+
+  kb-inference:
+    name: pytest — KB_Inference
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      UV_PYTHON: "3.13"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+      - run: scripts/ci/kb-inference.sh
+
+  evals-tests:
+    name: pytest — evals
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      UV_PYTHON: "3.13"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+      - run: scripts/ci/evals-tests.sh
+
+  frontend:
+    name: build (tsc) + vitest — KB_Frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: KB_Frontend/package-lock.json
+      - run: scripts/ci/frontend.sh
+
+  gitleaks:
+    name: secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - run: scripts/ci/gitleaks.sh

@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "types": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "confidence": { "type": "number", "enum": [0.9, 0.6, 0.3] },
+          "occurred_at": { "type": "string" },
+          "role": { "type": "string", "enum": ["stakeholder", "owner", "participant", "subject", "tool-used"] }
+        },
+        "required": ["name", "types", "confidence"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["entities"],
+  "additionalProperties": false
+}
